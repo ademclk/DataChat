@@ -3,11 +3,14 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+using std::cout;
+using std::endl;
+
 int main()
 {
     // Create a socket
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-    std::cout << "Socket " << serverSocket << " created." << std::endl;
+    cout << "Socket " << serverSocket << " created." << endl;
 
     // Set up server address information
     sockaddr_in serverAddr;
@@ -20,8 +23,7 @@ int main()
 
     // Listen for incoming connections
     listen(serverSocket, 10);
-
-    std::cout << "Server is listening on port 8080..." << std::endl;
+    cout << "Server is listening on port 8080..." << endl;
 
     while (true)
     {
@@ -30,12 +32,12 @@ int main()
         socklen_t clientAddrSize = sizeof(clientAddr);
         int clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddr, &clientAddrSize);
 
-        std::cout << "Received connection request from " << inet_ntoa(clientAddr.sin_addr) << ":" << clientSocket << std::endl;
+        cout << "Received connection request from " << inet_ntoa(clientAddr.sin_addr) << ":" << clientSocket << endl;
 
         // Grant the request and send a success message
         send(clientSocket, "SYSTEM | 200 | Successful connection.", 38, 0);
-        std::cout << "Request granted." << std::endl;
-        std::cout << "SYSTEM | 200 | Successful connection." << std::endl;
+        cout << "Request granted." << endl;
+        cout << "SYSTEM | 200 | Successful connection." << endl;
 
         // Close the client socket
         close(clientSocket);
