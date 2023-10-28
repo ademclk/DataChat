@@ -1,10 +1,22 @@
 #include <iostream>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <thread>
+#include <vector>
 #include <unistd.h>
 
 using std::cout;
 using std::endl;
+using std::thread;
+using std::vector;
+
+void handleClient(int clientSocket)
+{
+    send(clientSocket, "SYSTEM | 200 | Welcome to the server!", 38, 0);
+
+    // Close the client socket
+    close(clientSocket);
+}
 
 int main()
 {
@@ -25,6 +37,8 @@ int main()
     listen(serverSocket, 10);
     cout << "Server is listening on port 8080..." << endl;
 
+    vector<thread> clientThreads;
+
     while (true)
     {
         // Accept a client connection
@@ -32,15 +46,11 @@ int main()
         socklen_t clientAddrSize = sizeof(clientAddr);
         int clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddr, &clientAddrSize);
 
+        // Create a new thread to handle the client
         cout << "Received connection request from " << inet_ntoa(clientAddr.sin_addr) << ":" << clientSocket << endl;
 
-        // Grant the request and send a success message
-        send(clientSocket, "SYSTEM | 200 | Successful connection.", 38, 0);
-        cout << "Request granted." << endl;
-        cout << "SYSTEM | 200 | Successful connection." << endl;
-
-        // Close the client socket
-        close(clientSocket);
+        clientThreads.emplace_back(handleClient, clientSocket);
+        clientThreads.back().detach(); // Detach the thread
     }
 
     // Close the server socket
