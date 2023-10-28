@@ -4,15 +4,84 @@
 #include <thread>
 #include <vector>
 #include <unistd.h>
+#include <map>
 
+// Instead, using namespace std;
 using std::cout;
 using std::endl;
+using std::map;
+using std::string;
 using std::thread;
 using std::vector;
 
+// Store usernames of connected clients
+map<int, string> clientUsernames;
+
 void handleClient(int clientSocket)
 {
-    send(clientSocket, "SYSTEM | 200 | Welcome to the server!", 38, 0);
+    send(clientSocket, "SYSTEM | 200 | Successful connection.", 38, 0);
+
+    char buffer[4096];
+    string username = "Guest";
+
+    while (true)
+    {
+        // Receive message from client
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if (bytesReceived < 0)
+        {
+            cout << "Client " << username << " disconnected." << endl;
+            break;
+        }
+
+        buffer[bytesReceived] = '\0';
+
+        string clientMessage = buffer;
+
+        // Handle client commands
+        if (clientMessage.substr(0, 1) == "!")
+        {
+            if (clientMessage == "!quit")
+            {
+                string quitMessage = "SYSTEM | 200 | " + username + " has quit.";
+                cout << quitMessage << endl;
+                for (const auto &[client, clientUsername] : clientUsernames)
+                {
+                    if (client != clientSocket)
+                    {
+                        send(client, quitMessage.c_str(), quitMessage.size(), 0);
+                    }
+                }
+                break;
+            }
+            else if (clientMessage.substr(0, 9) == "!username")
+            {
+                string oldUsername = username;
+                username = clientMessage.substr(9);
+                clientUsernames[clientSocket] = username;
+                string usernameMessage = "SYSTEM | 200 | " + oldUsername + " updated username to " + username + ".";
+                cout << usernameMessage << endl;
+                for (const auto &[client, clientUsername] : clientUsernames)
+                {
+                    if (client != clientSocket)
+                    {
+                        send(client, usernameMessage.c_str(), usernameMessage.size(), 0);
+                    }
+                }
+            }
+            else
+            {
+                cout << "Received mesage from " << username << ": " << clientMessage << endl;
+                for (const auto &[client, clientUsername] : clientUsernames)
+                {
+                    if (client != clientSocket)
+                    {
+                        send(client, (clientUsername + ": " + clientMessage).c_str(), clientMessage.size() + clientUsername.size() + 2, 0);
+                    }
+                }
+            }
+        }
+    }
 
     // Close the client socket
     close(clientSocket);
@@ -49,8 +118,8 @@ int main()
         // Create a new thread to handle the client
         cout << "Received connection request from " << inet_ntoa(clientAddr.sin_addr) << ":" << clientSocket << endl;
 
-        clientThreads.emplace_back(handleClient, clientSocket);
-        clientThreads.back().detach(); // Detach the thread
+        thread clientThread(handleClient, clientSocket);
+        clientThread.detach(); // Detach the thread
     }
 
     // Close the server socket
