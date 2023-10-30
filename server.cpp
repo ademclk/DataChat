@@ -26,7 +26,7 @@ void handleClient(int clientSocket)
 
     while (true)
     {
-        // Receive message from client
+        // Receive message from the client
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesReceived < 0)
         {
@@ -69,16 +69,15 @@ void handleClient(int clientSocket)
                     }
                 }
             }
-            else
+        }
+        else
+        {
+            cout << "Received message from " << username << ": " << clientMessage << endl;
+
+            // Broadcast the message to all clients, including the sender
+            for (const auto &[client, clientUsername] : clientUsernames)
             {
-                cout << "Received mesage from " << username << ": " << clientMessage << endl;
-                for (const auto &[client, clientUsername] : clientUsernames)
-                {
-                    if (client != clientSocket)
-                    {
-                        send(client, (clientUsername + ": " + clientMessage).c_str(), clientMessage.size() + clientUsername.size() + 2, 0);
-                    }
-                }
+                send(client, (clientUsername + ": " + clientMessage).c_str(), clientMessage.size() + clientUsername.size() + 2, 0);
             }
         }
     }
@@ -97,7 +96,7 @@ int main()
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(8080);
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
+    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
     // Bind the socket to the server address
     bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
