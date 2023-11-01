@@ -2,3 +2,5 @@
 /server.dSYM
 client
 server
+client.dSYM/Contents/Info.plist
+client.dSYM/Contents/Resources/Relocations/aarch64/client.yml

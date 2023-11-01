@@ -5,6 +5,7 @@
 #include <cstring>
 #include <thread>
 #include <mutex>
+#include <chrono>
 
 using std::cerr;
 using std::cin;
@@ -17,6 +18,13 @@ using std::thread;
 
 // Mutex for thread-safe printing
 mutex displayMutex;
+
+// Function to clear the line on the client's terminal
+void clearLine()
+{
+    // ANSI escape code to clear the line
+    cout << "\x1B[K" << std::flush;
+}
 
 // Function to receive and display messages
 void receiveMessages(int clientSocket)
@@ -35,6 +43,7 @@ void receiveMessages(int clientSocket)
         // Lock the display while printing
         lock_guard<mutex> lock(displayMutex);
 
+        clearLine();
         cout << buffer << endl;
     }
 }
@@ -90,13 +99,14 @@ int main()
         }
         else
         {
-            string messageWithUsername = username + ": " + message;
-
             // Lock the display while printing
             lock_guard<mutex> lock(displayMutex);
 
-            cout << messageWithUsername << endl;
-            send(clientSocket, messageWithUsername.c_str(), messageWithUsername.size(), 0);
+            cout << "\x1B[A"; // Move up one line
+            cout << "\x1B[K"; // Clear the line
+
+            // Send the message to the server
+            send(clientSocket, (username + ": " + message).c_str(), message.size() + username.size() + 2, 0);
         }
     }
 

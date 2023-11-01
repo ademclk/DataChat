@@ -74,10 +74,17 @@ void handleClient(int clientSocket)
         {
             cout << "Received message from " << username << ": " << clientMessage << endl;
 
+            // Check if the message already contains the sender's username
+            if (clientMessage.find(username) == string::npos)
+            {
+                // If the sender's username is not present, prepend it
+                clientMessage = username + ": " + clientMessage;
+            }
+
             // Broadcast the message to all clients, including the sender
             for (const auto &[client, clientUsername] : clientUsernames)
             {
-                send(client, (clientUsername + ": " + clientMessage).c_str(), clientMessage.size() + clientUsername.size() + 2, 0);
+                send(client, clientMessage.c_str(), clientMessage.size(), 0);
             }
         }
     }
