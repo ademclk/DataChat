@@ -54,11 +54,14 @@ void ClientHandler::handle()
             userManager.updateUsernames(clientSocket, username);
             hasSetUsername = true;
 
-            std::string successMessage = "SYSTEM | 200 | Username set to " + username + ". You can now start chatting!";
+            // Notify the original sender client about the username change
+            std::string successMessage = "SYSTEM | 200 | Username set to " + username + ". You can now start chatting!\n";
             std::cout << successMessage << std::endl;
+            send(clientSocket, successMessage.c_str(), successMessage.size(), 0);
 
-            // Broadcast to all clients that the user has set a username
-            userManager.broadcastMessage(clientSocket, successMessage);
+            // Broadcast to all clients (excluding the original sender) that the user has set a username
+            std::string broadcastMessage = "SYSTEM | 200 | User " + username + " has joined the chat!";
+            userManager.broadcastMessage(clientSocket, broadcastMessage);
 
             // Send help message
             sendHelpMessage();
