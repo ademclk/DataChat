@@ -40,3 +40,16 @@ void UserManager::removeClient(int clientSocket)
     std::lock_guard<std::mutex> lock(mutex);
     clientUsernames.erase(clientSocket);
 }
+
+std::vector<std::string> UserManager::getOnlineUsernames() const
+{
+    std::lock_guard<std::mutex> lock(mutex);
+    std::vector<std::string> onlineUsernames;
+
+    for (const auto &[client, username] : clientUsernames)
+    {
+        onlineUsernames.push_back(username);
+    }
+
+    return onlineUsernames;
+}

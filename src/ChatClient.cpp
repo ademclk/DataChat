@@ -77,6 +77,11 @@ void ChatClient::handleClientCommand(const std::string &command)
     {
         sendMessage(command);
     }
+
+    if (command == "!list")
+    {
+        sendMessage(command);
+    }
 }
 
 void ChatClient::updateUsername(const std::string &newUsername)

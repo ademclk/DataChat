@@ -13,6 +13,7 @@ public:
     std::string getUsername(int clientSocket) const;
     void broadcastMessage(int senderSocket, const std::string &message);
     void removeClient(int clientSocket);
+    std::vector<std::string> getOnlineUsernames() const;
 
 private:
     std::map<int, std::string> clientUsernames;

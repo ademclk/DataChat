@@ -21,6 +21,7 @@ public:
      */
     void handle();
     void sendHelpMessage();
+    void listUsers();
 
 private:
     int clientSocket;         // The client socket descriptor

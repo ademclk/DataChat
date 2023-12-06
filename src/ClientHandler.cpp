@@ -135,8 +135,11 @@ void ClientHandler::handleCommand(const std::string &command, std::string &usern
     }
     else if (command.substr(0, 9) == "!help")
     {
-        std::cout << "send help message.";
         sendHelpMessage();
+    }
+    else if (command.substr(0, 9) == "!list")
+    {
+        listUsers();
     }
     // Add other command handlers as needed
 }
@@ -162,8 +165,27 @@ void ClientHandler::sendHelpMessage()
 {
     const char *helpMessage = "\nSYSTEM | 200 | Available Commands:\n"
                               "!help                - Display this help message\n"
-                              "!quit                - Quit the chat\n"
-                              "!username <new_name> - Change your username\n";
+                              "!username <new_name> - Change your username\n"
+                              "!list                - List of online users\n"
+                              "!quit                - Quit the chat\n";
 
     send(clientSocket, helpMessage, strlen(helpMessage), 0);
+}
+
+void ClientHandler::listUsers()
+{
+    std::string userList = "SYSTEM | 200 | Online Users: ";
+
+    // Use the UserManager object's method to get the online users
+    std::vector<std::string> onlineUsers = userManager.getOnlineUsernames();
+
+    for (const auto &username : onlineUsers)
+    {
+        userList += username + ", ";
+    }
+
+    // Remove the trailing comma and space
+    userList = userList.substr(0, userList.length() - 2);
+
+    send(clientSocket, userList.c_str(), userList.size(), 0);
 }
