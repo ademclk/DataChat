@@ -68,10 +68,10 @@ void ChatClient::handleClientCommand(const std::string &command)
         return;
     }
 
-    if (command.substr(0, 9) == "!username")
-    {
-        updateUsername(command.substr(9));
-    }
+    if (command.substr(0, 9) == "!username")  
+    {  
+        updateUsername(command.substr(10));
+    }  
 
     if (command == "!help")
     {
