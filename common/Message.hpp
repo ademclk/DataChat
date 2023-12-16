@@ -3,6 +3,15 @@
 
 #include <string>
 
+enum class CommandType
+{
+    CONN,
+    MESG,
+    MERR,
+    GONE,
+    NONE
+};
+
 /**
  * @class Message
  * @brief A class to encapsulate a message.
@@ -20,7 +29,7 @@ public:
      * @param content The content of the message.
      * @param sender The sender (identified by the username) of the message.
      */
-    Message(const std::string &content, const std::string &sender);
+    Message(const std::string &content, const std::string &sender, CommandType commandType = CommandType::NONE);
 
     /**
      * @brief Get the content of the message.
@@ -40,9 +49,33 @@ public:
      */
     std::string getFormattedMessage() const;
 
+    CommandType getCommandType() const;
+
+    void calculateParityBit();
+
+    bool verifyParityBit() const;
+
+    void calculateParity2D();
+
+    bool verifyParityBit2D() const;
+
+    void calculateChecksum();
+
+    bool verifyChecksum() const;
+
+    void calculateCRC();
+
+    bool verifyCRC() const;
+
+    static Message parseFromString(const std::string &rawMessage);
+
 private:
     std::string content; // The content of the message.
     std::string sender;  // The sender (identified by the username) of the message.
+    CommandType commandType;
+    std::string errorCheckingBits;
+
+    static int countOnes(const std::string &str);
 };
 
 #endif
