@@ -40,6 +40,9 @@ public:
      */
     int getSocket() const;
 
+    int acceptConnection() const;
+    void shutdownServer() const;
+
 private:
     // The server socket descriptor
     int serverSocket;

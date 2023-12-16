@@ -4,9 +4,10 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <cstring>
+#include <thread>
 
 ClientHandler::ClientHandler(int clientSocket, UserManager &userManager)
-    : clientSocket(clientSocket), userManager(userManager)
+    : clientSocket(clientSocket), userManager(userManager), hasSetUsername(false)
 {
 }
 
@@ -106,6 +107,7 @@ void ClientHandler::handle()
 
     // Close the client socket
     close(clientSocket);
+    userManager.removeClient(clientSocket);
 }
 
 void ClientHandler::handleCommand(const std::string &command, std::string &username)
@@ -143,6 +145,32 @@ void ClientHandler::handleCommand(const std::string &command, std::string &usern
     else if (command.substr(0, 9) == "!list")
     {
         listUsers();
+    }
+    else if (command.substr(0, 8) == "!private")
+    {
+        std::string rest = command.substr(9);
+        std::size_t pos = rest.find(" ");
+        std::string targetUsername = rest.substr(0, pos);
+        std::string message = rest.substr(pos + 1);
+
+        // Get the target client's socket
+        int targetSocket = userManager.getClientSocket(targetUsername);
+
+        if (targetSocket != -1) // If the target client's socket is valid
+        {
+            // This line blocks all clients and server
+            // userManager.sendPrivateMessage(clientSocket, targetSocket, message);
+
+            // Ensure sendPrivateMessage does not block  
+            std::thread([this, targetSocket, message]() {  
+                userManager.sendPrivateMessage(clientSocket, targetSocket, message);  
+            }).detach();  
+        }
+        else
+        {
+            std::string errorMessage = "User " + targetUsername + " does not exist or is not connected.";
+            send(clientSocket, errorMessage.c_str(), errorMessage.size(), 0);
+        }
     }
     // Add other command handlers as needed
 }

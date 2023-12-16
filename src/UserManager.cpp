@@ -26,6 +26,22 @@ std::string UserManager::getUsername(int clientSocket) const
     return (usernameIterator != clientUsernames.end()) ? usernameIterator->second : "Guest";
 }
 
+int UserManager::getClientSocket(const std::string &username) const
+{
+    std::lock_guard<std::mutex> lock(mutex); // Lock the mutex as we're accessing shared data.
+    std::cout << "Getting client socket for username: " << username << std::endl;
+    for (const auto &clientUsername : clientUsernames)
+    {
+        if (clientUsername.second == username)
+        {
+            std::cout << "Returning client socket (first): " << clientUsername.first << std::endl;
+            std::cout << "Returning client socket (second): " << clientUsername.second << std::endl;
+            return clientUsername.first;
+        }
+    }
+    return -1; // Return -1 or another invalid socket number if the username was not found.
+}
+
 void UserManager::broadcastMessage(int senderSocket, const std::string &message)
 {
     std::lock_guard<std::mutex> lock(mutex);
@@ -33,6 +49,27 @@ void UserManager::broadcastMessage(int senderSocket, const std::string &message)
     {
         send(client, message.c_str(), message.size(), 0);
     }
+}
+// FIXME: Private message makes server unresponsive
+
+void UserManager::sendPrivateMessage(int senderSocket, int recipientSocket, const std::string &message)
+{
+    std::string senderUsername;
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto senderIter = clientUsernames.find(senderSocket);
+        if (senderIter != clientUsernames.end())
+        {
+            senderUsername = senderIter->second;
+        }
+        else
+        {
+            return;
+        }
+    }
+    std::cout << "Sending private message from " << senderUsername << " to " << recipientSocket << ": " << message << std::endl;
+    std::string formattedMessage = senderUsername + " (private): " + message;
+    send(recipientSocket, formattedMessage.c_str(), formattedMessage.size(), 0);
 }
 
 void UserManager::removeClient(int clientSocket)

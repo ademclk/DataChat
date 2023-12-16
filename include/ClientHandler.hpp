@@ -2,6 +2,8 @@
 #define CLIENTHANDLER_HPP
 
 #include "UserManager.hpp"
+#include <string>
+#include <vector>
 
 /**
  * @class ClientHandler

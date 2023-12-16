@@ -35,7 +35,10 @@ void ChatClient::receiveMessages()
         }
         buffer[bytesRead] = '\0';
 
+        std::cout << "Data received: " << buffer << std::endl; // Add this line
+
         clearLine();
+        std::cout << "Received message: " << buffer << std::endl;
         std::cout << buffer << std::endl;
     }
 }
@@ -46,6 +49,8 @@ void ChatClient::handleUserInput()
     {
         std::string message;
         getline(std::cin, message);
+
+        std::cout << "User input: " << message << std::endl;
 
         if (message.substr(0, 1) == "!")
         {
@@ -60,6 +65,7 @@ void ChatClient::handleUserInput()
 
 void ChatClient::handleClientCommand(const std::string &command)
 {
+    std::cout << "Handling command: " << command << std::endl;
     if (command == "!quit")
     {
         std::cout << "Quitting..." << std::endl;
@@ -68,10 +74,10 @@ void ChatClient::handleClientCommand(const std::string &command)
         return;
     }
 
-    if (command.substr(0, 9) == "!username")  
-    {  
+    if (command.substr(0, 9) == "!username")
+    {
         updateUsername(command.substr(10));
-    }  
+    }
 
     if (command == "!help")
     {
@@ -79,6 +85,11 @@ void ChatClient::handleClientCommand(const std::string &command)
     }
 
     if (command == "!list")
+    {
+        sendMessage(command);
+    }
+
+    if (command.substr(0, 8) == "!private")
     {
         sendMessage(command);
     }

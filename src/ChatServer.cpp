@@ -6,30 +6,50 @@
 #include <sys/socket.h>
 #include <cstring>
 
-ChatServer::ChatServer()
+ChatServer::ChatServer() : isServerRunning(true)
 {
 }
 
 ChatServer::~ChatServer()
 {
+    stopServer();
 }
 
 void ChatServer::startListening()
 {
-    while (true)
+    while (isServerRunning)
     {
-        // Accept a client connection
-        sockaddr_in clientAddr;
-        socklen_t clientAddrSize = sizeof(clientAddr);
-        int clientSocket = accept(serverSocket.getSocket(), (struct sockaddr *)&clientAddr, &clientAddrSize);
+        try
+        {
+            int clientSocket = serverSocket.acceptConnection();
+            sockaddr_in clientAddr;
+            socklen_t clientAddrLen = sizeof(clientAddr);
 
-        // Create a new thread to handle the client
-        std::cout << "Received connection request from " << inet_ntoa(clientAddr.sin_addr) << ":" << clientSocket << std::endl;
+            getpeername(clientSocket, (struct sockaddr *)&clientAddr, &clientAddrLen);
 
-        std::thread clientThread(&ClientHandler::handle, ClientHandler(clientSocket, userManager));
-        clientThread.detach(); // Detach the thread
+            std::cout << "Received connection request from " << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) << std::endl;
+
+            auto handler = std::make_shared<ClientHandler>(clientSocket, std::ref(userManager));
+            clientThreads.emplace_back(&ClientHandler::handle, handler); // Add the thread to the vector
+        }
+        catch (const std::runtime_error &e)
+        {
+            std::cerr << "Failed to accept connection: " << e.what() << std::endl;
+        }
     }
 }
+
+void ChatServer::stopServer() {  
+    isServerRunning = false;
+  
+    for (auto& thread : clientThreads) {  
+        if (thread.joinable()) {  
+            thread.join();  
+        }  
+    }  
+  
+    clientThreads.clear();
+}  
 
 void ChatServer::handleClient(int clientSocket)
 {
