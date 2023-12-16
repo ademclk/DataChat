@@ -126,7 +126,7 @@ void ClientHandler::handleCommand(const std::string &command, std::string &usern
     }
     // If the client sent a username command, update the username, print a username update message,
     // and broadcast it to all other clients
-    else if (command.substr(0, 9) == "!username")
+    else if (command.rfind("!username ", 0) == 0)
     {
         std::string oldUsername = username;
         username = command.substr(9);
@@ -146,7 +146,7 @@ void ClientHandler::handleCommand(const std::string &command, std::string &usern
     {
         listUsers();
     }
-    else if (command.substr(0, 8) == "!private")
+    else if (command.rfind("!private ", 0) == 0)
     {
         std::string rest = command.substr(9);
         std::size_t pos = rest.find(" ");
