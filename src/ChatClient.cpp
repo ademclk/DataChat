@@ -30,16 +30,17 @@ void ChatClient::receiveMessages()
         int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesRead <= 0)
         {
+            std::lock_guard<std::mutex> lock(consoleMutex);
             std::cout << "Disconnected from server." << std::endl;
             break;
         }
         buffer[bytesRead] = '\0';
-
-        std::cout << "Data received: " << buffer << std::endl; // Add this line
-
         clearLine();
-        std::cout << "Received message: " << buffer << std::endl;
-        std::cout << buffer << std::endl;
+        Message message = Message::parseFromString(buffer);
+        // std::string output = message.getSenderUsername() + ": " + message.getContent();
+        // std::cout << output << std::endl;
+        std::lock_guard<std::mutex> lock(consoleMutex);
+        std::cout << message.getFormattedMessage() << std::endl;
     }
 }
 
@@ -47,68 +48,77 @@ void ChatClient::handleUserInput()
 {
     while (true)
     {
-        std::string message;
-        getline(std::cin, message);
+        std::string input;
+        getline(std::cin, input);
 
-        std::cout << "User input: " << message << std::endl;
-
-        if (message.substr(0, 1) == "!")
+        if (input.substr(0, 1) == "!")
         {
-            handleClientCommand(message);
+            std::lock_guard<std::mutex> lock(consoleMutex);
+            std::cout << input << std::endl;
+            handleClientCommand(input);
         }
         else
         {
-            sendMessage(username + ": " + message);
+            std::lock_guard<std::mutex> lock(consoleMutex);
+            Message message(input, username, CommandType::MESG);
+            sendMessage(message);
         }
     }
 }
 
 void ChatClient::handleClientCommand(const std::string &command)
 {
-    std::cout << "Handling command: " << command << std::endl;
     if (command == "!quit")
     {
         std::cout << "Quitting..." << std::endl;
-        sendMessage(command);
+        Message quitMessage("", username, CommandType::GONE);
+        sendMessage(quitMessage);
         closeConnection();
         return;
     }
 
     if (command.substr(0, 9) == "!username")
     {
+        std::cout << "Update username" << std::endl;
         updateUsername(command.substr(10));
     }
 
-    if (command == "!help")
+    if (command == "!help" || command == "!list")
     {
-        sendMessage(command);
-    }
-
-    if (command == "!list")
-    {
-        sendMessage(command);
+        Message commandMessage(command, username, CommandType::MESG);
+        sendMessage(commandMessage);
     }
 
     if (command.substr(0, 8) == "!private")
     {
-        sendMessage(command);
+        std::string recipientAndMsg = command.substr(9);
+        size_t separator = recipientAndMsg.find(' ');
+        std::string recipient = recipientAndMsg.substr(0, separator);
+        std::string msg = recipientAndMsg.substr(separator + 1);
+        Message message(recipient + "|" + msg, username, CommandType::MESG);
+        sendMessage(message);
     }
 }
 
 void ChatClient::updateUsername(const std::string &newUsername)
 {
+    std::cout << "Update Username!" << std::endl;
     std::string oldUsername = username;
     username = newUsername;
+    Message updateUsernameMessage("!username " + newUsername, username, CommandType::MESG);
+    std::cout << updateUsernameMessage.getFormattedMessage() << std::endl;
+    sendMessage(updateUsernameMessage);
     std::cout << "Updated username to " << username << "." << std::endl;
-    sendMessage("!username" + newUsername);
 }
 
-void ChatClient::sendMessage(const std::string &message)
+void ChatClient::sendMessage(const Message &message)
 {
     clearLine();
     std::cout << "\x1B[A"; // Move up one line
     std::cout << "\x1B[K"; // Clear the line
-    send(clientSocket, message.c_str(), message.size(), 0);
+    std::string messageStr = message.getFormattedMessage();
+    std::cout << messageStr << std::endl;
+    send(clientSocket, messageStr.c_str(), messageStr.size(), 0);
 }
 
 void ChatClient::startChat()
@@ -135,10 +145,10 @@ void ChatClient::startChat()
     std::cout << buffer << std::endl;
 
     std::thread receiveThread(&ChatClient::receiveMessages, this);
-
-    handleUserInput();
+    std::thread userInputThread(&ChatClient::handleUserInput, this);
 
     receiveThread.join(); // Wait for the receive thread to finish
+    userInputThread.join();
 
     closeConnection();
 }

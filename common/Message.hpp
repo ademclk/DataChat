@@ -40,6 +40,8 @@ public:
      */
     std::string getContent() const;
 
+    std::string getSenderUsername() const;
+
     /**
      * @brief Get the formatted message.
      *

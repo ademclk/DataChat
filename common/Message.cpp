@@ -1,5 +1,6 @@
 #include "Message.hpp"
 #include <stdexcept>
+#include <iostream>
 #include <bitset>
 
 /**
@@ -24,6 +25,11 @@ std::string Message::getContent() const
     return content;
 }
 
+std::string Message::getSenderUsername() const
+{
+    return sender;
+}
+
 /**
  * @brief Get the formatted message.
  *
@@ -31,7 +37,26 @@ std::string Message::getContent() const
  */
 std::string Message::getFormattedMessage() const
 {
-    return sender + ": " + content + " [" + errorCheckingBits + "]";
+    std::string commandString;
+    switch (commandType)
+    {
+    case CommandType::MESG:
+        commandString = "MESG";
+        break;
+    case CommandType::CONN:
+        commandString = "CONN";
+        break;
+    case CommandType::MERR:
+        commandString = "MERR";
+        break;
+    case CommandType::GONE:
+        commandString = "GONE";
+        break;
+    default:
+        commandString = "NONE";
+    }
+
+    return sender + " | " + commandString + " | " + content + " | [" + errorCheckingBits + "]";
 }
 
 CommandType Message::getCommandType() const
@@ -53,13 +78,22 @@ int Message::countOnes(const std::string &str)
 
 void Message::calculateParityBit()
 {
+    std::cout << "Calculated parity message content: "
+              << "|" << content << "|" << std::endl;
     int onesCount = countOnes(content);
+    std::cout << "Count of ones: " << onesCount << std::endl;
     errorCheckingBits = (onesCount % 2 == 1) ? "1" : "0";
+    std::cout << "Calculated errorChecking bits: " << errorCheckingBits << std::endl;
 }
 
 bool Message::verifyParityBit() const
 {
+    std::cout << "Verify parity message content: "
+              << "|" << content << "|" << std::endl;
+    std::cout << "Verify error checking bits: " << errorCheckingBits << std::endl;
     int onesCount = countOnes(content);
+    std::cout << "Count of ones: " << onesCount << std::endl;
+    std::cout << "Total (ones + parity): " << onesCount + std::stoi(errorCheckingBits) << std::endl;
     return (onesCount + std::stoi(errorCheckingBits)) % 2 == 0;
 }
 
@@ -193,7 +227,42 @@ bool Message::verifyCRC() const
 
 Message Message::parseFromString(const std::string &rawMessage)
 {
-    // Parse the raw string and extract message components and error checking bits
+    size_t senderEndPos = rawMessage.find('|');
+    if (senderEndPos == std::string::npos)
+    {
+        throw std::runtime_error("Invalid message format");
+    }
+    std::string sender = rawMessage.substr(0, senderEndPos - 1); // -1 to skip " "
+
+    size_t commandEndPos = rawMessage.find('|', senderEndPos + 1);
+    if (commandEndPos == std::string::npos)
+    {
+        throw std::runtime_error("Invalid message format");
+    }
+    std::string commandString = rawMessage.substr(senderEndPos + 2, commandEndPos - senderEndPos - 3); // +2 to skip " |", -3 to skip " |"
+
+    CommandType commandType;
+    if (commandString == "MESG")
+    {
+        commandType = CommandType::MESG;
+    }
+    else if (commandString == "CONN")
+    {
+        commandType = CommandType::CONN;
+    }
+    else if (commandString == "MERR")
+    {
+        commandType = CommandType::MERR;
+    }
+    else if (commandString == "GONE")
+    {
+        commandType = CommandType::GONE;
+    }
+    else
+    {
+        commandType = CommandType::NONE;
+    }
+
     size_t separatorPos = rawMessage.find_last_of('[');
     size_t endPos = rawMessage.find_last_of(']');
     if (separatorPos == std::string::npos || endPos == std::string::npos || separatorPos > endPos)
@@ -201,46 +270,7 @@ Message Message::parseFromString(const std::string &rawMessage)
         throw std::runtime_error("Invalid message format");
     }
 
-    std::string senderAndContent = rawMessage.substr(0, separatorPos);
-    size_t senderEndPos = senderAndContent.find(':');
-    if (senderEndPos == std::string::npos)
-    {
-        throw std::runtime_error("Invalid message format");
-    }
-
-    std::string sender = senderAndContent.substr(0, senderEndPos);
-    std::string contentAndCommand = senderAndContent.substr(senderEndPos + 2); // +2 to skip ": "
-
-    // Initialize the command type and content
-    CommandType commandType = CommandType::NONE; // Default command type
-    std::string content = contentAndCommand;
-
-    // Find the vertical bar that separates the command and the content
-    size_t commandSeparatorPos = contentAndCommand.find('|');
-    if (commandSeparatorPos != std::string::npos)
-    {
-        std::string commandString = contentAndCommand.substr(0, commandSeparatorPos);
-        content = contentAndCommand.substr(commandSeparatorPos + 1); // +1 to skip "|"
-
-        // Determine the command type based on the command string
-        if (commandString == "MESG")
-        {
-            commandType = CommandType::MESG;
-        }
-        else if (commandString == "CONN")
-        {
-            commandType = CommandType::CONN;
-        }
-        else if (commandString == "MERR")
-        {
-            commandType = CommandType::MERR;
-        }
-        else if (commandString == "GONE")
-        {
-            commandType = CommandType::GONE;
-        }
-    }
-
+    std::string content = rawMessage.substr(commandEndPos + 2, separatorPos - commandEndPos - 5); // +2 to skip " |", -4 to skip " | ["
     std::string parityBit = rawMessage.substr(separatorPos + 1, endPos - separatorPos - 1);
 
     // Construct a message object with the parsed content

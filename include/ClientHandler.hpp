@@ -2,6 +2,7 @@
 #define CLIENTHANDLER_HPP
 
 #include "UserManager.hpp"
+#include "../common/Message.hpp"
 #include <string>
 #include <vector>
 

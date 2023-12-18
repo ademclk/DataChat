@@ -26,6 +26,7 @@ void ClientHandler::handle()
     // Keep handling the client connection until the client disconnects or quits
     while (!hasSetUsername)
     {
+        std::cout << "Setting username" << std::endl;
         // Receive message from the client
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesReceived <= 0)
@@ -47,6 +48,11 @@ void ClientHandler::handle()
 
         // Convert the received message to a string
         std::string clientMessage = buffer;
+        std::cout << "First clientMessage" << std::endl;
+        std::cout << clientMessage << std::endl;
+        Message receivedMessage = Message::parseFromString(clientMessage);
+        std::cout << "Parsed client message" << std::endl;
+        std::cout << receivedMessage.getFormattedMessage() << std::endl;
 
         if (clientMessage.substr(0, 9) == "!username")
         {
@@ -69,13 +75,19 @@ void ClientHandler::handle()
         }
         else
         {
+            std::cout << "clientMessage" << std::endl;
+
+            std::cout << clientMessage << std::endl;
             // Inform the client to set a username
-            send(clientSocket, "SYSTEM | 200 | Please set your username using !username <your_username>.", 72, 0);
+            Message setUsernameMessage("Set your username using !username <username>", "SYSTEM", CommandType::MESG);
+            std::string messageStr = setUsernameMessage.getFormattedMessage();
+            send(clientSocket, messageStr.c_str(), messageStr.size(), 0);
         }
     }
 
     while (true)
     {
+        std::cout << "Username not set" << std::endl;
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesReceived <= 0)
         {
@@ -161,10 +173,10 @@ void ClientHandler::handleCommand(const std::string &command, std::string &usern
             // This line blocks all clients and server
             // userManager.sendPrivateMessage(clientSocket, targetSocket, message);
 
-            // Ensure sendPrivateMessage does not block  
-            std::thread([this, targetSocket, message]() {  
-                userManager.sendPrivateMessage(clientSocket, targetSocket, message);  
-            }).detach();  
+            // Ensure sendPrivateMessage does not block
+            std::thread([this, targetSocket, message]()
+                        { userManager.sendPrivateMessage(clientSocket, targetSocket, message); })
+                .detach();
         }
         else
         {
