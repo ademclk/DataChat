@@ -26,7 +26,6 @@ void ClientHandler::handle()
     // Keep handling the client connection until the client disconnects or quits
     while (!hasSetUsername)
     {
-        std::cout << "Setting username" << std::endl;
         // Receive message from the client
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesReceived <= 0)
@@ -48,11 +47,7 @@ void ClientHandler::handle()
 
         // Convert the received message to a string
         std::string clientMessage = buffer;
-        std::cout << "First clientMessage" << std::endl;
-        std::cout << clientMessage << std::endl;
         Message receivedMessage = Message::parseFromString(clientMessage);
-        std::cout << "Parsed client message" << std::endl;
-        std::cout << receivedMessage.getFormattedMessage() << std::endl;
 
         if (clientMessage.substr(0, 9) == "!username")
         {
@@ -75,9 +70,6 @@ void ClientHandler::handle()
         }
         else
         {
-            std::cout << "clientMessage" << std::endl;
-
-            std::cout << clientMessage << std::endl;
             // Inform the client to set a username
             Message setUsernameMessage("Set your username using !username <username>", "SYSTEM", CommandType::MESG);
             std::string messageStr = setUsernameMessage.getFormattedMessage();
@@ -87,7 +79,6 @@ void ClientHandler::handle()
 
     while (true)
     {
-        std::cout << "Username not set" << std::endl;
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesReceived <= 0)
         {

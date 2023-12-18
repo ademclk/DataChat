@@ -34,8 +34,6 @@ int UserManager::getClientSocket(const std::string &username) const
     {
         if (clientUsername.second == username)
         {
-            std::cout << "Returning client socket (first): " << clientUsername.first << std::endl;
-            std::cout << "Returning client socket (second): " << clientUsername.second << std::endl;
             return clientUsername.first;
         }
     }

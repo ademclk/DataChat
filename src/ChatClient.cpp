@@ -54,7 +54,6 @@ void ChatClient::handleUserInput()
         if (input.substr(0, 1) == "!")
         {
             std::lock_guard<std::mutex> lock(consoleMutex);
-            std::cout << input << std::endl;
             handleClientCommand(input);
         }
         else
@@ -79,7 +78,6 @@ void ChatClient::handleClientCommand(const std::string &command)
 
     if (command.substr(0, 9) == "!username")
     {
-        std::cout << "Update username" << std::endl;
         updateUsername(command.substr(10));
     }
 
@@ -102,13 +100,10 @@ void ChatClient::handleClientCommand(const std::string &command)
 
 void ChatClient::updateUsername(const std::string &newUsername)
 {
-    std::cout << "Update Username!" << std::endl;
     std::string oldUsername = username;
     username = newUsername;
     Message updateUsernameMessage("!username " + newUsername, username, CommandType::MESG);
-    std::cout << updateUsernameMessage.getFormattedMessage() << std::endl;
     sendMessage(updateUsernameMessage);
-    std::cout << "Updated username to " << username << "." << std::endl;
 }
 
 void ChatClient::sendMessage(const Message &message)
@@ -117,7 +112,6 @@ void ChatClient::sendMessage(const Message &message)
     std::cout << "\x1B[A"; // Move up one line
     std::cout << "\x1B[K"; // Clear the line
     std::string messageStr = message.getFormattedMessage();
-    std::cout << messageStr << std::endl;
     send(clientSocket, messageStr.c_str(), messageStr.size(), 0);
 }
 

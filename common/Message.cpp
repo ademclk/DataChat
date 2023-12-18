@@ -78,22 +78,13 @@ int Message::countOnes(const std::string &str)
 
 void Message::calculateParityBit()
 {
-    std::cout << "Calculated parity message content: "
-              << "|" << content << "|" << std::endl;
     int onesCount = countOnes(content);
-    std::cout << "Count of ones: " << onesCount << std::endl;
     errorCheckingBits = (onesCount % 2 == 1) ? "1" : "0";
-    std::cout << "Calculated errorChecking bits: " << errorCheckingBits << std::endl;
 }
 
 bool Message::verifyParityBit() const
 {
-    std::cout << "Verify parity message content: "
-              << "|" << content << "|" << std::endl;
-    std::cout << "Verify error checking bits: " << errorCheckingBits << std::endl;
     int onesCount = countOnes(content);
-    std::cout << "Count of ones: " << onesCount << std::endl;
-    std::cout << "Total (ones + parity): " << onesCount + std::stoi(errorCheckingBits) << std::endl;
     return (onesCount + std::stoi(errorCheckingBits)) % 2 == 0;
 }
 
