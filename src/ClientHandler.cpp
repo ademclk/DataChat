@@ -1,4 +1,5 @@
 #include "ClientHandler.hpp"
+#include "SocketUtils.hpp"
 #include <iostream>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -14,8 +15,10 @@ ClientHandler::ClientHandler(int clientSocket, UserManager &userManager)
 void ClientHandler::handle()
 {
     // Send a connection message to the client
-    const char *connectionMessage = "SYSTEM | 200 | Welcome to the chat! Please set your username using !username <your_username>.";
-    send(clientSocket, connectionMessage, strlen(connectionMessage), 0);
+    std::string connectionMessageText = "Welcome to the chat! Please set your username using !username <your_username>.";
+    Message connectionMessage(connectionMessageText, "SYSTEM", CommandType::MESG);
+    std::string connectionMessageStr = connectionMessage.getFormattedMessage();
+    sendDelimitedMessage(clientSocket, connectionMessageStr);
 
     // Buffer to store the received messages
     char buffer[4096];
@@ -23,46 +26,34 @@ void ClientHandler::handle()
     // Default username for the client
     std::string username = "Guest";
 
-    // Keep handling the client connection until the client disconnects or quits
     while (!hasSetUsername)
     {
         // Receive message from the client
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesReceived <= 0)
+        std::string clientMessage = receiveDelimitedMessage(clientSocket);
+        if (clientMessage.empty())
         {
-            if (bytesReceived == 0)
-            {
-                // Client closed the connection
-                std::cout << "Client " << username << " disconnected." << std::endl;
-            }
-            else
-            {
-                perror("recv: ");
-            }
-
+            std::cout << "Client " << username << " disconnected." << std::endl;
             break;
         }
-        // Null-terminate the received message
-        buffer[bytesReceived] = '\0';
 
         // Convert the received message to a string
-        std::string clientMessage = buffer;
         Message receivedMessage = Message::parseFromString(clientMessage);
 
-        if (clientMessage.substr(0, 9) == "!username")
+        if (receivedMessage.getContent().substr(0, 9) == "!username")
         {
-            std::string newUsername = clientMessage.substr(9);
+            std::string newUsername = receivedMessage.getContent().substr(10);
             username = newUsername;
             userManager.updateUsernames(clientSocket, username);
             hasSetUsername = true;
 
             // Notify the original sender client about the username change
-            std::string successMessage = "SYSTEM | 200 | Username set to " + username + ". You can now start chatting!\n";
-            std::cout << successMessage << std::endl;
-            send(clientSocket, successMessage.c_str(), successMessage.size(), 0);
+            std::string message = "Username set to " + username + ". You can now start chatting!";
+            Message successMessage(message, "SYSTEM", CommandType::MESG);
+            std::string successMessageStr = successMessage.getFormattedMessage();
+            sendDelimitedMessage(clientSocket, successMessageStr);
 
             // Broadcast to all clients (excluding the original sender) that the user has set a username
-            std::string broadcastMessage = "SYSTEM | 200 | User " + username + " has joined the chat!";
+            std::string broadcastMessage = "User " + username + " has joined the chat!";
             userManager.broadcastMessage(clientSocket, broadcastMessage);
 
             // Send help message
@@ -73,30 +64,18 @@ void ClientHandler::handle()
             // Inform the client to set a username
             Message setUsernameMessage("Set your username using !username <username>", "SYSTEM", CommandType::MESG);
             std::string messageStr = setUsernameMessage.getFormattedMessage();
-            send(clientSocket, messageStr.c_str(), messageStr.size(), 0);
+            sendDelimitedMessage(clientSocket, messageStr);
         }
     }
 
     while (true)
     {
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesReceived <= 0)
+        std::string clientMessage = receiveDelimitedMessage(clientSocket);
+        if (clientMessage.empty())
         {
-            if (bytesReceived == 0)
-            {
-                // Client closed the connection
-                std::cout << "Client " << username << " disconnected." << std::endl;
-            }
-            else
-            {
-                perror("recv: ");
-            }
-
+            std::cout << "Client " << username << " disconnected." << std::endl;
             break;
         }
-
-        buffer[bytesReceived] = '\0';
-        std::string clientMessage = buffer;
 
         if (clientMessage.substr(0, 1) == "!")
         {
@@ -172,7 +151,7 @@ void ClientHandler::handleCommand(const std::string &command, std::string &usern
         else
         {
             std::string errorMessage = "User " + targetUsername + " does not exist or is not connected.";
-            send(clientSocket, errorMessage.c_str(), errorMessage.size(), 0);
+            sendDelimitedMessage(clientSocket, errorMessage);
         }
     }
     // Add other command handlers as needed
@@ -197,13 +176,16 @@ void ClientHandler::handleRegularMessage(const std::string &message, const std::
 
 void ClientHandler::sendHelpMessage()
 {
-    const char *helpMessage = "\nSYSTEM | 200 | Available Commands:\n"
-                              "!help                - Display this help message\n"
-                              "!username <new_name> - Change your username\n"
-                              "!list                - List of online users\n"
-                              "!quit                - Quit the chat\n";
+    std::string helpMessageText = "\nSYSTEM | 200 | Available Commands:\n"
+                                  "!help                - Display this help message\n"
+                                  "!username <new_name> - Change your username\n"
+                                  "!list                - List of online users\n"
+                                  "!quit                - Quit the chat\n";
 
-    send(clientSocket, helpMessage, strlen(helpMessage), 0);
+    Message helpMessage(helpMessageText, "SYSTEM", CommandType::MESG);
+
+    std::string helpMessageStr = helpMessage.getFormattedMessage();
+    sendDelimitedMessage(clientSocket, helpMessageStr);
 }
 
 void ClientHandler::listUsers()
@@ -221,5 +203,5 @@ void ClientHandler::listUsers()
     // Remove the trailing comma and space
     userList = userList.substr(0, userList.length() - 2);
 
-    send(clientSocket, userList.c_str(), userList.size(), 0);
+    sendDelimitedMessage(clientSocket, userList);
 }

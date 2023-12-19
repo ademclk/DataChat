@@ -3,6 +3,7 @@
 
 #include <map>
 #include <mutex>
+#include <../common/Message.hpp>
 
 class UserManager
 {

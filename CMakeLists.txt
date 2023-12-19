@@ -18,11 +18,13 @@ set(SERVER_FILES
     ${CMAKE_SOURCE_DIR}/src/ChatServer.cpp
     ${CMAKE_SOURCE_DIR}/src/ClientHandler.cpp
     ${CMAKE_SOURCE_DIR}/src/UserManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/SocketUtils.cpp
 )
 
 set(CLIENT_FILES
     ${COMMON_FILES}
     ${CMAKE_SOURCE_DIR}/src/ChatClient.cpp
+    ${CMAKE_SOURCE_DIR}/src/SocketUtils.cpp
 )
 
 # Create a library for common files

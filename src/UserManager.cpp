@@ -1,6 +1,8 @@
 #include "UserManager.hpp"
+#include "../include/SocketUtils.hpp"
 #include <iostream>
 #include <unistd.h>
+#include <../common/Message.hpp>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <cstring>
@@ -43,12 +45,13 @@ int UserManager::getClientSocket(const std::string &username) const
 void UserManager::broadcastMessage(int senderSocket, const std::string &message)
 {
     std::lock_guard<std::mutex> lock(mutex);
-    for (const auto &[client, clientUsernames] : clientUsernames)
+    for (const auto &[client, clientUsername] : clientUsernames)
     {
-        send(client, message.c_str(), message.size(), 0);
+        Message chatMessage(message, clientUsername, CommandType::MESG);
+        std::string chatMessageStr = chatMessage.getFormattedMessage();
+        sendDelimitedMessage(client, chatMessageStr);
     }
 }
-// FIXME: Private message makes server unresponsive
 
 void UserManager::sendPrivateMessage(int senderSocket, int recipientSocket, const std::string &message)
 {
@@ -67,7 +70,7 @@ void UserManager::sendPrivateMessage(int senderSocket, int recipientSocket, cons
     }
     std::cout << "Sending private message from " << senderUsername << " to " << recipientSocket << ": " << message << std::endl;
     std::string formattedMessage = senderUsername + " (private): " + message;
-    send(recipientSocket, formattedMessage.c_str(), formattedMessage.size(), 0);
+    sendDelimitedMessage(recipientSocket, formattedMessage);
 }
 
 void UserManager::removeClient(int clientSocket)

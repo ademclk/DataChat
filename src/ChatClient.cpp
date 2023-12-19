@@ -1,4 +1,5 @@
 #include "ChatClient.hpp"
+#include "SocketUtils.hpp"
 #include <iostream>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -24,23 +25,21 @@ void ChatClient::clearLine()
 
 void ChatClient::receiveMessages()
 {
-    char buffer[4096];
     while (true)
     {
-        int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesRead <= 0)
+        std::string message = receiveDelimitedMessage(clientSocket);
+        if (message.empty())
         {
-            std::lock_guard<std::mutex> lock(consoleMutex);
-            std::cout << "Disconnected from server." << std::endl;
+            std::cerr << "Failed to receive data: " << strerror(errno) << std::endl;
             break;
         }
-        buffer[bytesRead] = '\0';
+
         clearLine();
-        Message message = Message::parseFromString(buffer);
-        // std::string output = message.getSenderUsername() + ": " + message.getContent();
-        // std::cout << output << std::endl;
+        std::cout << "RECEIVE MESSAGE" << std::endl;
+        std::cout << message << std::endl;
+        Message parsedMessage = Message::parseFromString(message);
         std::lock_guard<std::mutex> lock(consoleMutex);
-        std::cout << message.getFormattedMessage() << std::endl;
+        std::cout << parsedMessage.getFormattedMessage() << std::endl;
     }
 }
 
@@ -112,7 +111,7 @@ void ChatClient::sendMessage(const Message &message)
     std::cout << "\x1B[A"; // Move up one line
     std::cout << "\x1B[K"; // Clear the line
     std::string messageStr = message.getFormattedMessage();
-    send(clientSocket, messageStr.c_str(), messageStr.size(), 0);
+    sendDelimitedMessage(clientSocket, messageStr);
 }
 
 void ChatClient::startChat()
@@ -132,11 +131,9 @@ void ChatClient::startChat()
         return;
     }
 
-    char buffer[4096];
-    int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
-
     std::cout << "Connecting to server..." << std::endl;
-    std::cout << buffer << std::endl;
+    std::string serverMessage = receiveDelimitedMessage(clientSocket);
+    std::cout << serverMessage << std::endl;
 
     std::thread receiveThread(&ChatClient::receiveMessages, this);
     std::thread userInputThread(&ChatClient::handleUserInput, this);
