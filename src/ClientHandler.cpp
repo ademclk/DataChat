@@ -70,20 +70,20 @@ void ClientHandler::handle()
 
     while (true)
     {
-        std::string clientMessage = receiveDelimitedMessage(clientSocket);
-        if (clientMessage.empty())
+        Message clientMessage = Message::parseFromString(receiveDelimitedMessage(clientSocket));
+        if (clientMessage.getContent().empty())
         {
             std::cout << "Client " << username << " disconnected." << std::endl;
             break;
         }
 
-        if (clientMessage.substr(0, 1) == "!")
+        if (clientMessage.getContent().substr(0, 1) == "!")
         {
-            handleCommand(clientMessage, username);
+            handleCommand(clientMessage.getContent(), username);
         }
         else
         {
-            handleRegularMessage(clientMessage, username);
+            handleRegularMessage(clientMessage.getContent(), username);
         }
     }
 
@@ -163,24 +163,26 @@ void ClientHandler::handleRegularMessage(const std::string &message, const std::
     std::cout << "Received message from " << username << ": " << message << std::endl;
 
     // Check if the message already contains the sender's username
-    std::string clientMessage = message;
-    if (clientMessage.find(username) == std::string::npos)
-    {
-        // If the sender's username is not present, prepend it
-        clientMessage = username + ": " + message;
-    }
+    // UPDATE: There's no need to append username because of the new message format
+    // Message format: sender | command | content | [bits]
+    // std::string clientMessage = message;
+    // if (clientMessage.find(username) == std::string::npos)
+    // {
+    //     If the sender's username is not present, prepend it
+    //     clientMessage = username + ": " + message;
+    // }
 
     // Broadcast the message to all clients, including the sender
-    userManager.broadcastMessage(clientSocket, clientMessage);
+    userManager.broadcastMessage(clientSocket, message);
 }
 
 void ClientHandler::sendHelpMessage()
 {
-    std::string helpMessageText = "\nSYSTEM | 200 | Available Commands:\n"
-                                  "!help                - Display this help message\n"
-                                  "!username <new_name> - Change your username\n"
-                                  "!list                - List of online users\n"
-                                  "!quit                - Quit the chat\n";
+    std::string helpMessageText = "Available Commands:\n"
+                                  "\t\t!help                - Display this help message\n"
+                                  "\t\t!username <new_name> - Change your username\n"
+                                  "\t\t!list                - List of online users\n"
+                                  "\t\t!quit                - Quit the chat \t\t\t\t";
 
     Message helpMessage(helpMessageText, "SYSTEM", CommandType::MESG);
 

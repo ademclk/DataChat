@@ -35,8 +35,6 @@ void ChatClient::receiveMessages()
         }
 
         clearLine();
-        std::cout << "RECEIVE MESSAGE" << std::endl;
-        std::cout << message << std::endl;
         Message parsedMessage = Message::parseFromString(message);
         std::lock_guard<std::mutex> lock(consoleMutex);
         std::cout << parsedMessage.getFormattedMessage() << std::endl;
