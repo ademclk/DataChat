@@ -54,7 +54,7 @@ void ClientHandler::handle()
 
             // Broadcast to all clients (excluding the original sender) that the user has set a username
             std::string broadcastMessage = "User " + username + " has joined the chat!";
-            userManager.broadcastMessage(clientSocket, broadcastMessage);
+            userManager.broadcastMessage(-2, broadcastMessage);
 
             // Send help message
             sendHelpMessage();
@@ -173,7 +173,8 @@ void ClientHandler::handleRegularMessage(const std::string &message, const std::
     // }
 
     // Broadcast the message to all clients, including the sender
-    userManager.broadcastMessage(clientSocket, message);
+
+    userManager.broadcastMessage(userManager.getClientSocket(username), message);
 }
 
 void ClientHandler::sendHelpMessage()

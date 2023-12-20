@@ -44,10 +44,20 @@ int UserManager::getClientSocket(const std::string &username) const
 
 void UserManager::broadcastMessage(int senderSocket, const std::string &message)
 {
+    std::string senderUsername;
+    if (senderSocket == -2)
+    {
+        senderUsername = "SYSTEM";
+    }
+    else
+    {
+        senderUsername = getUsername(senderSocket);
+    }
+
     std::lock_guard<std::mutex> lock(mutex);
     for (const auto &[client, clientUsername] : clientUsernames)
     {
-        Message chatMessage(message, clientUsername, CommandType::MESG);
+        Message chatMessage(message, senderUsername, CommandType::MESG);
         std::string chatMessageStr = chatMessage.getFormattedMessage();
         sendDelimitedMessage(client, chatMessageStr);
     }
