@@ -68,23 +68,30 @@ void ClientHandler::handle()
         }
     }
 
-    while (true)
+    try
     {
-        Message clientMessage = Message::parseFromString(receiveDelimitedMessage(clientSocket));
-        if (clientMessage.getContent().empty())
+        while (true)
         {
-            std::cout << "Client " << username << " disconnected." << std::endl;
-            break;
-        }
+            Message clientMessage = Message::parseFromString(receiveDelimitedMessage(clientSocket));
+            if (clientMessage.getContent().empty())
+            {
+                std::cout << "Client " << username << " disconnected." << std::endl;
+                break;
+            }
 
-        if (clientMessage.getContent().substr(0, 1) == "!")
-        {
-            handleCommand(clientMessage.getContent(), username);
+            if (clientMessage.getContent().substr(0, 1) == "!")
+            {
+                handleCommand(clientMessage.getContent(), username);
+            }
+            else
+            {
+                handleRegularMessage(clientMessage.getContent(), username);
+            }
         }
-        else
-        {
-            handleRegularMessage(clientMessage.getContent(), username);
-        }
+    }
+    catch (std::runtime_error &err)
+    {
+        std::cout << "Client " << username << " quit." << std::endl;
     }
 
     // Close the client socket
@@ -97,13 +104,17 @@ void ClientHandler::handleCommand(const std::string &command, std::string &usern
     // If the client sent a quit command, print a quit message, broadcast it to all other clients, and break the loop
     if (command == "!quit")
     {
-        std::string quitMessage = "SYSTEM | 200 | " + username + " has quit.";
-        std::cout << quitMessage << std::endl;
+        std::string quitMessageText = username + " has quit.";
 
-        userManager.broadcastMessage(clientSocket, quitMessage);
+        Message quitMessage(quitMessageText, username, CommandType::GONE);
+
+        std::string quitMessageStr = quitMessage.getContent();
+
+        userManager.broadcastMessage(-2, quitMessageStr);
         userManager.removeClient(clientSocket);
 
-        // Break the loop
+        throw std::runtime_error("Client quit.");
+
         return;
     }
     // If the client sent a username command, update the username, print a username update message,

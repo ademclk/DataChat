@@ -8,7 +8,7 @@
 #include <mutex>
 #include <thread>
 
-ChatClient::ChatClient() : clientSocket(-1), username("Guest")
+ChatClient::ChatClient() : clientSocket(-1), username("Guest"), shouldContinue(true)
 {
     // Implement any necessary initialization
 }
@@ -25,7 +25,7 @@ void ChatClient::clearLine()
 
 void ChatClient::receiveMessages()
 {
-    while (true)
+    while (shouldContinue)
     {
         std::string message = receiveDelimitedMessage(clientSocket);
         if (message.empty())
@@ -43,7 +43,7 @@ void ChatClient::receiveMessages()
 
 void ChatClient::handleUserInput()
 {
-    while (true)
+    while (shouldContinue)
     {
         std::string input;
         getline(std::cin, input);
@@ -67,9 +67,11 @@ void ChatClient::handleClientCommand(const std::string &command)
     if (command == "!quit")
     {
         std::cout << "Quitting..." << std::endl;
-        Message quitMessage("", username, CommandType::GONE);
+        Message quitMessage(command, username, CommandType::GONE);
+
         sendMessage(quitMessage);
-        closeConnection();
+        shouldContinue = false;
+
         return;
     }
 

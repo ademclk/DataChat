@@ -3,6 +3,7 @@
 
 #include <string>
 #include <mutex>
+#include <atomic>
 #include <../common/Message.hpp>
 
 class ChatClient
@@ -17,6 +18,7 @@ private:
     int clientSocket;
     std::string username;
     std::mutex consoleMutex;
+    std::atomic<bool> shouldContinue;
 
     void handleUserInput();
     void handleClientCommand(const std::string &command);

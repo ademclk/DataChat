@@ -53,12 +53,14 @@ void UserManager::broadcastMessage(int senderSocket, const std::string &message)
     {
         senderUsername = getUsername(senderSocket);
     }
-
+    std::cout << "Broadcasting message for all clients..." << std::endl;
     std::lock_guard<std::mutex> lock(mutex);
     for (const auto &[client, clientUsername] : clientUsernames)
     {
         Message chatMessage(message, senderUsername, CommandType::MESG);
         std::string chatMessageStr = chatMessage.getFormattedMessage();
+        std::cout << "Message successfully sent to " << client << "::" << clientUsername << std::endl;
+
         sendDelimitedMessage(client, chatMessageStr);
     }
 }
