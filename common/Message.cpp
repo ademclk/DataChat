@@ -52,6 +52,9 @@ std::string Message::getFormattedMessage() const
     case CommandType::GONE:
         commandString = "GONE";
         break;
+    case CommandType::PRIV:
+        commandString = "PRIV";
+        break;
     default:
         commandString = "NONE";
     }
@@ -248,6 +251,10 @@ Message Message::parseFromString(const std::string &rawMessage)
     else if (commandString == "GONE")
     {
         commandType = CommandType::GONE;
+    }
+    else if (commandString == "PRIV")
+    {
+        commandType = CommandType::PRIV;
     }
     else
     {

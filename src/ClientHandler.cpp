@@ -122,14 +122,14 @@ void ClientHandler::handleCommand(const std::string &command, std::string &usern
     else if (command.rfind("!username ", 0) == 0)
     {
         std::string oldUsername = username;
-        username = command.substr(9);
+        username = command.substr(10);
 
         userManager.updateUsernames(clientSocket, username);
 
-        std::string usernameMessage = "SYSTEM | 200 | " + oldUsername + " updated username to " + username + ".";
-        std::cout << usernameMessage << std::endl;
+        std::string usernameMessage = oldUsername + " updated username to " + username + ".";
+        Message usernameUpdateMessage(usernameMessage, oldUsername, CommandType::MESG);
 
-        userManager.broadcastMessage(clientSocket, usernameMessage);
+        userManager.broadcastMessage(-2, usernameUpdateMessage.getContent());
     }
     else if (command.substr(0, 9) == "!help")
     {
@@ -141,6 +141,8 @@ void ClientHandler::handleCommand(const std::string &command, std::string &usern
     }
     else if (command.rfind("!private ", 0) == 0)
     {
+        std::cout << "PRIVATE MESSAGE RECEIVED" << std::endl;
+        std::cout << command << std::endl;
         std::string rest = command.substr(9);
         std::size_t pos = rest.find(" ");
         std::string targetUsername = rest.substr(0, pos);
@@ -204,7 +206,7 @@ void ClientHandler::sendHelpMessage()
 
 void ClientHandler::listUsers()
 {
-    std::string userList = "SYSTEM | 200 | Online Users: ";
+    std::string userList = "Online Users: ";
 
     // Use the UserManager object's method to get the online users
     std::vector<std::string> onlineUsers = userManager.getOnlineUsernames();
@@ -217,5 +219,8 @@ void ClientHandler::listUsers()
     // Remove the trailing comma and space
     userList = userList.substr(0, userList.length() - 2);
 
-    sendDelimitedMessage(clientSocket, userList);
+    Message userListMessage(userList, "SYSTEM", CommandType::MESG);
+
+    std::string userListMessageStr = userListMessage.getFormattedMessage();
+    sendDelimitedMessage(clientSocket, userListMessageStr);
 }

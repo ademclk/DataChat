@@ -9,6 +9,7 @@ enum class CommandType
     MESG,
     MERR,
     GONE,
+    PRIV,
     NONE
 };
 

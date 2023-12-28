@@ -80,9 +80,10 @@ void UserManager::sendPrivateMessage(int senderSocket, int recipientSocket, cons
             return;
         }
     }
-    std::cout << "Sending private message from " << senderUsername << " to " << recipientSocket << ": " << message << std::endl;
-    std::string formattedMessage = senderUsername + " (private): " + message;
-    sendDelimitedMessage(recipientSocket, formattedMessage);
+    std::cout << "Sending private message from " << senderSocket << " to " << recipientSocket << ": " << message << std::endl;
+    Message privateMessage(message, senderUsername, CommandType::PRIV);
+    std::string privateMessageStr = privateMessage.getFormattedMessage();
+    sendDelimitedMessage(recipientSocket, privateMessageStr);
 }
 
 void UserManager::removeClient(int clientSocket)

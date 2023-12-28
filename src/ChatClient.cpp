@@ -88,12 +88,9 @@ void ChatClient::handleClientCommand(const std::string &command)
 
     if (command.substr(0, 8) == "!private")
     {
-        std::string recipientAndMsg = command.substr(9);
-        size_t separator = recipientAndMsg.find(' ');
-        std::string recipient = recipientAndMsg.substr(0, separator);
-        std::string msg = recipientAndMsg.substr(separator + 1);
-        Message message(recipient + "|" + msg, username, CommandType::MESG);
-        sendMessage(message);
+        Message privateMessage(command, username, CommandType::MESG);
+        std::cout << privateMessage.getFormattedMessage() << std::endl;
+        sendMessage(privateMessage);
     }
 }
 
