@@ -182,6 +182,7 @@ bool Message::verifyParityBit() const
 
 void Message::calculateCRC()
 {
+    // Generator used here is x^3 + x + 1
     const std::string generator = "1011";
     std::string data = std::bitset<8>(content[0]).to_string();
     for (int i = 1; i < content.size(); ++i)
@@ -189,8 +190,11 @@ void Message::calculateCRC()
         data += std::bitset<8>(content[i]).to_string();
     }
 
+    // Add 0s one less degree of the generator polynomial
     data = data + std::string(generator.size() - 1, '0');
 
+    // Using XOR (to substract generator from to polynomial) 
+    // for the division part of the CRC algorithm
     for (int i = 0; i <= data.size() - generator.size();)
     {
         for (int j = 0; j < generator.size(); ++j)

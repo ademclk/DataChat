@@ -6,6 +6,10 @@
 #include <sys/socket.h>
 #include <cstring>
 #include <mutex>
+#include <fstream>
+#include <ctime>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <thread>
 
 ChatClient::ChatClient() : clientSocket(-1), username("Guest"), shouldContinue(true)
@@ -40,6 +44,7 @@ void ChatClient::receiveMessages()
             Message parsedMessage = Message::parseFromString(message);
             std::lock_guard<std::mutex> lock(consoleMutex);
             std::cout << parsedMessage.getFormattedMessage() << std::endl;
+            writeToLogFile(parsedMessage.getFormattedMessage());
         }
         catch (std::runtime_error &err)
         {
@@ -49,6 +54,7 @@ void ChatClient::receiveMessages()
             // Send a MERR command to the server
             Message errorMessage("Message error", username, CommandType::MERR);
             std::string errorMessageStr = errorMessage.getFormattedMessage();
+            writeToLogFile(errorMessageStr);
             sendDelimitedMessage(clientSocket, errorMessageStr);
         }
     }
@@ -119,6 +125,26 @@ void ChatClient::updateUsername(const std::string &newUsername)
 {
     std::string oldUsername = username;
     username = newUsername;
+
+    // Get current date and time
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+    std::string date = std::to_string(1900 + ltm->tm_year) + "-" +
+                       std::to_string(1 + ltm->tm_mon) + "-" +
+                       std::to_string(ltm->tm_mday) + "_" +
+                       std::to_string(1 + ltm->tm_hour) + "-" +
+                       std::to_string(1 + ltm->tm_min) + "-" +
+                       std::to_string(1 + ltm->tm_sec);
+
+    // Format the new filename using the current date, time, and new username
+    std::string newLogFilename = "logs/" + date + "_" + username + ".txt";
+
+    // Rename the log file
+    std::rename(logFilename.c_str(), newLogFilename.c_str());
+
+    // Update logFilename to the new filename
+    logFilename = newLogFilename;
+
     Message updateUsernameMessage("!username " + newUsername, username, CommandType::MESG);
     sendMessage(updateUsernameMessage);
 }
@@ -129,7 +155,28 @@ void ChatClient::sendMessage(const Message &message)
     std::cout << "\x1B[A"; // Move up one line
     std::cout << "\x1B[K"; // Clear the line
     std::string messageStr = message.getFormattedMessage();
+    writeToLogFile(messageStr);
     sendDelimitedMessage(clientSocket, messageStr);
+}
+
+void ChatClient::writeToLogFile(const std::string &message)
+{
+    struct stat st = {0};
+    if (stat("logs", &st) == -1)
+    {
+        mkdir("logs", 0700);
+    }
+
+    // Open the log file and append the message
+    std::ofstream logFile;
+    logFile.open(logFilename.c_str(), std::ios_base::app);
+    if (logFile.is_open())
+    {
+        logFile << message << std::endl;
+        logFile.close();
+    }
+    else
+        std::cout << "Unable to open file";
 }
 
 void ChatClient::startChat()
@@ -152,6 +199,19 @@ void ChatClient::startChat()
     std::cout << "Connecting to server..." << std::endl;
     std::string serverMessage = receiveDelimitedMessage(clientSocket);
     std::cout << serverMessage << std::endl;
+
+    // Get current date and time
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+    std::string date = std::to_string(1900 + ltm->tm_year) + "-" +
+                       std::to_string(1 + ltm->tm_mon) + "-" +
+                       std::to_string(ltm->tm_mday) + "_" +
+                       std::to_string(1 + ltm->tm_hour) + "-" +
+                       std::to_string(1 + ltm->tm_min) + "-" +
+                       std::to_string(1 + ltm->tm_sec);
+
+    // Format the filename using the current date, time, and username
+    logFilename = "logs/" + date + ".txt";
 
     std::thread receiveThread(&ChatClient::receiveMessages, this);
     std::thread userInputThread(&ChatClient::handleUserInput, this);

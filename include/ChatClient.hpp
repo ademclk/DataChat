@@ -13,12 +13,14 @@ public:
     ~ChatClient();
 
     void startChat();
+    void writeToLogFile(const std::string &message);
 
 private:
     int clientSocket;
     std::string username;
     std::mutex consoleMutex;
     std::atomic<bool> shouldContinue;
+    std::string logFilename;  
 
     void handleUserInput();
     void handleClientCommand(const std::string &command);
