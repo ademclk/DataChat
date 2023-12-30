@@ -34,10 +34,23 @@ void ChatClient::receiveMessages()
             break;
         }
 
-        clearLine();
-        Message parsedMessage = Message::parseFromString(message);
-        std::lock_guard<std::mutex> lock(consoleMutex);
-        std::cout << parsedMessage.getFormattedMessage() << std::endl;
+        try
+        {
+            clearLine();
+            Message parsedMessage = Message::parseFromString(message);
+            std::lock_guard<std::mutex> lock(consoleMutex);
+            std::cout << parsedMessage.getFormattedMessage() << std::endl;
+        }
+        catch (std::runtime_error &err)
+        {
+            // If an error occurs while parsing the message, it means that the message has been corrupted
+            std::cout << "Message was corrupted. Sending MERR..." << std::endl;
+
+            // Send a MERR command to the server
+            Message errorMessage("Message error", username, CommandType::MERR);
+            std::string errorMessageStr = errorMessage.getFormattedMessage();
+            sendDelimitedMessage(clientSocket, errorMessageStr);
+        }
     }
 }
 
@@ -47,6 +60,14 @@ void ChatClient::handleUserInput()
     {
         std::string input;
         getline(std::cin, input);
+
+        if (input.empty())
+        {
+            clearLine();
+            std::cout << "\x1B[A"; // Move up one line
+            std::cout << "\x1B[K"; // Clear the line
+            continue;
+        }
 
         if (input.substr(0, 1) == "!")
         {

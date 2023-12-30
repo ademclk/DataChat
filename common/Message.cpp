@@ -13,6 +13,7 @@ Message::Message(const std::string &content, const std::string &sender, CommandT
     : content(content), sender(sender), commandType(commandType)
 {
     calculateParityBit();
+    calculateCRC();
 }
 
 /**
@@ -59,7 +60,7 @@ std::string Message::getFormattedMessage() const
         commandString = "NONE";
     }
 
-    return sender + " | " + commandString + " | " + content + " | [" + errorCheckingBits + "]";
+    return sender + " | " + commandString + " | " + content + " | [" + parityBits + ":" + crcBits + "]";
 }
 
 CommandType Message::getCommandType() const
@@ -79,95 +80,105 @@ int Message::countOnes(const std::string &str)
     return numberOfOnes;
 }
 
+void Message::corruptMessage()
+{
+    if (commandType == CommandType::MESG && content.size() > 0)
+    {
+        int index = rand() % content.size(); // Random index
+        char bitToFlip = 1 << (rand() % 8);  // Random bit
+        content[index] ^= bitToFlip;         // Flip bit
+    }
+}
+
 void Message::calculateParityBit()
 {
     int onesCount = countOnes(content);
-    errorCheckingBits = (onesCount % 2 == 1) ? "1" : "0";
+    parityBits = (onesCount % 2 == 1) ? "1" : "0";
 }
 
 bool Message::verifyParityBit() const
 {
     int onesCount = countOnes(content);
-    return (onesCount + std::stoi(errorCheckingBits)) % 2 == 0;
+    return (onesCount + std::stoi(parityBits)) % 2 == 0;
 }
 
-void Message::calculateParity2D()
-{
-    int rows = content.length();
-    int columns = 8; // Assume each character is 8 bits
-    std::vector<std::bitset<8>> bits(rows);
+// void Message::calculateParity2D()
+// {
+//     int rows = content.length();
+//     int columns = 8; // Assume each character is 8 bits
+//     std::vector<std::bitset<8>> bits(rows);
 
-    for (int i = 0; i < rows; ++i)
-    {
-        bits[i] = std::bitset<8>(content[i]);
-    }
+//     for (int i = 0; i < rows; ++i)
+//     {
+//         bits[i] = std::bitset<8>(content[i]);
+//     }
 
-    std::string rowParityBits, columnParityBits(columns, '0');
-    for (const auto &row : bits)
-    {
-        rowParityBits.push_back((row.count() % 2 == 1) ? '1' : '0');
-        for (int i = 0; i < columns; ++i)
-        {
-            if (row[i] == 1)
-            {
-                columnParityBits[i] = (columnParityBits[i] == '0') ? '1' : '0';
-            }
-        }
-    }
+//     std::string rowParityBits, columnParityBits(columns, '0');
+//     for (const auto &row : bits)
+//     {
+//         rowParityBits.push_back((row.count() % 2 == 1) ? '1' : '0');
+//         for (int i = 0; i < columns; ++i)
+//         {
+//             if (row[i] == 1)
+//             {
+//                 columnParityBits[i] = (columnParityBits[i] == '0') ? '1' : '0';
+//             }
+//         }
+//     }
 
-    errorCheckingBits = rowParityBits + columnParityBits;
-}
+//     errorCheckingBits = rowParityBits + columnParityBits;
+// }
 
-bool Message::verifyParityBit2D() const
-{
-    int rows = content.length();
-    int columns = 8;
-    std::vector<std::bitset<8>> bits(rows);
+// bool Message::verifyParityBit2D() const
+// {
+//     int rows = content.length();
+//     int columns = 8;
+//     std::vector<std::bitset<8>> bits(rows);
 
-    for (int i = 0; i < rows; ++i)
-    {
-        bits[i] = std::bitset<8>(content[i]);
-    }
+//     for (int i = 0; i < rows; ++i)
+//     {
+//         bits[i] = std::bitset<8>(content[i]);
+//     }
 
-    std::string rowParityBits, columnParityBits(columns, '0');
-    for (const auto &row : bits)
-    {
-        rowParityBits.push_back((row.count() % 2 == 1) ? '1' : '0');
-        for (int i = 0; i < columns; ++i)
-        {
-            if (row[i] == 1)
-            {
-                columnParityBits[i] = (columnParityBits[i] == '0') ? '1' : '0';
-            }
-        }
-    }
+//     std::string rowParityBits, columnParityBits(columns, '0');
+//     for (const auto &row : bits)
+//     {
+//         rowParityBits.push_back((row.count() % 2 == 1) ? '1' : '0');
+//         for (int i = 0; i < columns; ++i)
+//         {
+//             if (row[i] == 1)
+//             {
+//                 columnParityBits[i] = (columnParityBits[i] == '0') ? '1' : '0';
+//             }
+//         }
+//     }
 
-    return errorCheckingBits == rowParityBits + columnParityBits;
-}
+//     return errorCheckingBits == rowParityBits + columnParityBits;
+// }
 
-void Message::calculateChecksum()
-{
-    uint16_t sum = 0;
-    for (char c : content)
-    {
-        sum += static_cast<uint16_t>(c);
-    }
-    sum = ~sum; // one's complement of sum
-    std::bitset<16> bits(sum);
-    errorCheckingBits = bits.to_string();
-}
+// void Message::calculateChecksum()
+// {
+//     uint16_t sum = 0;
+//     for (char c : content)
+//     {
+//         sum += static_cast<uint16_t>(c);
+//     }
+//     sum = ~sum; // one's complement of sum
+//     std::bitset<16> bits(sum);
+//     errorCheckingBits = bits.to_string();
+// }
 
-bool Message::verifyChecksum() const
-{
-    uint16_t sum = 0;
-    for (char c : content)
-    {
-        sum += static_cast<uint16_t>(c);
-    }
-    sum = ~sum;
-    std::bitset<16> bits(sum);
-    return errorCheckingBits == bits.to_string();
-}
+// bool Message::verifyChecksum() const
+// {
+//     uint16_t sum = 0;
+//     for (char c : content)
+//     {
+//         sum += static_cast<uint16_t>(c);
+//     }
+//     sum = ~sum;
+//     std::bitset<16> bits(sum);
+//     return errorCheckingBits == bits.to_string();
+// }
 
 void Message::calculateCRC()
 {
@@ -191,7 +202,7 @@ void Message::calculateCRC()
         }
     }
 
-    errorCheckingBits = data.substr(data.size() - generator.size() + 1);
+    crcBits = data.substr(data.size() - generator.size() + 1);
 }
 
 bool Message::verifyCRC() const
@@ -203,7 +214,7 @@ bool Message::verifyCRC() const
         data += std::bitset<8>(content[i]).to_string();
     }
 
-    data = data + errorCheckingBits;
+    data = data + crcBits;
 
     for (int i = 0; i <= data.size() - generator.size();)
     {
@@ -273,12 +284,26 @@ Message Message::parseFromString(const std::string &rawMessage)
 
     // Construct a message object with the parsed content
     Message message(content, sender, commandType);
-    message.errorCheckingBits = parityBit;
+
+    std::string errorBits = rawMessage.substr(separatorPos + 1, endPos - separatorPos - 1);
+    size_t separatorPos2 = errorBits.find(':');
+    if (separatorPos2 == std::string::npos || separatorPos2 >= errorBits.size() - 1)
+    {
+        throw std::runtime_error("Invalid message format");
+    }
+    message.parityBits = errorBits.substr(0, separatorPos2);
+    message.crcBits = errorBits.substr(separatorPos2 + 1);
 
     // Verify the parity bit
     if (!message.verifyParityBit())
     {
         throw std::runtime_error("Message verification failed: Parity bit does not match content");
+    }
+
+    // Verify CRC
+    if (!message.verifyCRC())
+    {
+        throw std::runtime_error("Message verification failed: CRC does not match content");
     }
 
     return message;

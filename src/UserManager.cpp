@@ -58,6 +58,16 @@ void UserManager::broadcastMessage(int senderSocket, const std::string &message)
     for (const auto &[client, clientUsername] : clientUsernames)
     {
         Message chatMessage(message, senderUsername, CommandType::MESG);
+
+        // Store the message before corruption
+        lastSentMessages[client] = chatMessage.getFormattedMessage();
+
+        // Corrupt the message before sending it
+        if (rand() % 10 == 0)
+        {
+            chatMessage.corruptMessage();
+        }
+
         std::string chatMessageStr = chatMessage.getFormattedMessage();
         std::cout << "Message successfully sent to " << client << "::" << clientUsername << std::endl;
 
@@ -81,8 +91,20 @@ void UserManager::sendPrivateMessage(int senderSocket, int recipientSocket, cons
         }
     }
     std::cout << "Sending private message from " << senderSocket << " to " << recipientSocket << ": " << message << std::endl;
+
     Message privateMessage(message, senderUsername, CommandType::PRIV);
+
+    // Store the message before corruption
+    lastSentMessages[recipientSocket] = privateMessage.getFormattedMessage();
+
+    // Corrupt the message before sending it
+    if (rand() % 10 == 0)
+    {
+        privateMessage.corruptMessage();
+    }
+
     std::string privateMessageStr = privateMessage.getFormattedMessage();
+
     sendDelimitedMessage(recipientSocket, privateMessageStr);
 }
 
@@ -103,4 +125,14 @@ std::vector<std::string> UserManager::getOnlineUsernames() const
     }
 
     return onlineUsernames;
+}
+
+void UserManager::resendMessage(int clientSocket)
+{
+    auto it = lastSentMessages.find(clientSocket);
+    if (it != lastSentMessages.end())
+    {
+        std::cout << "Last message was: " << it->second << std::endl;
+        sendDelimitedMessage(clientSocket, it->second);
+    }
 }

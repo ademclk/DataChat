@@ -17,10 +17,12 @@ public:
     void removeClient(int clientSocket);
     std::vector<std::string> getOnlineUsernames() const;
     void sendPrivateMessage(int senderSocket, int recipientSocket, const std::string &message);
+    void resendMessage(int clientSocket);
 
 private:
     std::map<int, std::string> clientUsernames;
     mutable std::mutex mutex;
+    std::unordered_map<int, std::string> lastSentMessages;
 };
 
 #endif

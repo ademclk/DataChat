@@ -54,6 +54,8 @@ public:
 
     CommandType getCommandType() const;
 
+    void corruptMessage();
+
     void calculateParityBit();
 
     bool verifyParityBit() const;
@@ -76,7 +78,8 @@ private:
     std::string content; // The content of the message.
     std::string sender;  // The sender (identified by the username) of the message.
     CommandType commandType;
-    std::string errorCheckingBits;
+    std::string parityBits;
+    std::string crcBits;
 
     static int countOnes(const std::string &str);
 };

@@ -16,7 +16,7 @@ void ClientHandler::handle()
 {
     // Send a connection message to the client
     std::string connectionMessageText = "Welcome to the chat! Please set your username using !username <your_username>.";
-    Message connectionMessage(connectionMessageText, "SYSTEM", CommandType::MESG);
+    Message connectionMessage(connectionMessageText, "SYSTEM", CommandType::CONN);
     std::string connectionMessageStr = connectionMessage.getFormattedMessage();
     sendDelimitedMessage(clientSocket, connectionMessageStr);
 
@@ -48,7 +48,7 @@ void ClientHandler::handle()
 
             // Notify the original sender client about the username change
             std::string message = "Username set to " + username + ". You can now start chatting!";
-            Message successMessage(message, "SYSTEM", CommandType::MESG);
+            Message successMessage(message, "SYSTEM", CommandType::CONN);
             std::string successMessageStr = successMessage.getFormattedMessage();
             sendDelimitedMessage(clientSocket, successMessageStr);
 
@@ -62,7 +62,7 @@ void ClientHandler::handle()
         else
         {
             // Inform the client to set a username
-            Message setUsernameMessage("Set your username using !username <username>", "SYSTEM", CommandType::MESG);
+            Message setUsernameMessage("Set your username using !username <username>", "SYSTEM", CommandType::CONN);
             std::string messageStr = setUsernameMessage.getFormattedMessage();
             sendDelimitedMessage(clientSocket, messageStr);
         }
@@ -85,7 +85,12 @@ void ClientHandler::handle()
             }
             else
             {
-                handleRegularMessage(clientMessage.getContent(), username);
+                if (clientMessage.getCommandType() == CommandType::MERR)
+                {
+                    userManager.resendMessage(clientSocket);
+                }
+
+                handleRegularMessage(clientMessage.getFormattedMessage(), username);
             }
         }
     }
@@ -141,8 +146,6 @@ void ClientHandler::handleCommand(const std::string &command, std::string &usern
     }
     else if (command.rfind("!private ", 0) == 0)
     {
-        std::cout << "PRIVATE MESSAGE RECEIVED" << std::endl;
-        std::cout << command << std::endl;
         std::string rest = command.substr(9);
         std::size_t pos = rest.find(" ");
         std::string targetUsername = rest.substr(0, pos);
@@ -172,22 +175,33 @@ void ClientHandler::handleCommand(const std::string &command, std::string &usern
 
 void ClientHandler::handleRegularMessage(const std::string &message, const std::string &username)
 {
-    // If the client sent a regular message, print it and broadcast it to all clients
-    std::cout << "Received message from " << username << ": " << message << std::endl;
+    try
+    {
+        // If the client sent a regular message, print it and broadcast it to all clients
+        std::cout << "Received message from " << username << ": " << message << std::endl;
 
-    // Check if the message already contains the sender's username
-    // UPDATE: There's no need to append username because of the new message format
-    // Message format: sender | command | content | [bits]
-    // std::string clientMessage = message;
-    // if (clientMessage.find(username) == std::string::npos)
-    // {
-    //     If the sender's username is not present, prepend it
-    //     clientMessage = username + ": " + message;
-    // }
+        Message receivedMessage = Message::parseFromString(message);
 
-    // Broadcast the message to all clients, including the sender
+        // If a MERR command was received, resend the last message to the client
+        if (receivedMessage.getCommandType() == CommandType::MERR)
+        {
+            std::cout << "MERR command received from " << username << ". Resending message..." << std::endl;
+            return;
+        }
 
-    userManager.broadcastMessage(userManager.getClientSocket(username), message);
+        // Otherwise, broadcast the message to all clients
+        userManager.broadcastMessage(userManager.getClientSocket(username), receivedMessage.getContent());
+    }
+    catch (std::runtime_error &err)
+    {
+        // If an error occurs while parsing the message, it means that the message has been corrupted
+        std::cout << "Message from " << username << " was corrupted." << std::endl;
+
+        // Send a MERR command to the server
+        Message errorMessage("Message error", username, CommandType::MERR);
+        std::string errorMessageStr = errorMessage.getFormattedMessage();
+        sendDelimitedMessage(clientSocket, errorMessageStr);
+    }
 }
 
 void ClientHandler::sendHelpMessage()
